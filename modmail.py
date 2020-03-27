@@ -49,5 +49,7 @@ async def answer(ctx, ticket_id, *, arg):
             await user.create_dm()
             user_dm_channel = user.dm_channel
         await user_dm_channel.send(f'{arg}')
+        # remove mod msg from channel
+        await ctx.message.delete(delay=3)
 
 bot.run(TOKEN)
