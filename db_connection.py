@@ -4,6 +4,9 @@ import sqlite3
 from sqlite3 import Error
 
 # TODO: check for sql injection
+#####################################################################
+# DO NOT USE IN PROD! SQL IS WRITTEN AS STRING, INJECTION WILL WORK #
+#####################################################################
 
 
 def create_connection(db_file):
@@ -36,13 +39,17 @@ def get_cursor_with_connection():
 
 def update_ticket(update_col, search_col, search_val, new_val):
     sql = f""" UPDATE tickets SET {update_col} = {new_val} WHERE {search_col} = {search_val} """
-    cur = get_cursor_with_connection()
+    con = get_connection()
+    cur = con.cursor()
     cur.execute(sql)
-    return cur.fetchone()
+    con.commit()
+    row = cur.lastrowid
+    con.close()
+    return row
 
 
 def select_ticket(search_col, search_val):
-    sql = f""" SELECT * FROM tickets WHERE {search_col} = {search_val} """
+    sql = f""" SELECT * FROM tickets WHERE {search_col} = {search_val} AND status = 'open' """
     cur = get_cursor_with_connection()
     cur.execute(sql)
     row = cur.fetchone()
@@ -50,25 +57,8 @@ def select_ticket(search_col, search_val):
     return row
 
 
-def select_ticket2(search_col, search_val):  # not working because of row_factory = Row ?
-    sql = f""" SELECT * FROM tickets WHERE ? = ? """
-    vals = (search_col, search_val)
-    cur = get_cursor_with_connection()
-    cur.execute(sql, vals)
-    row = cur.fetchone()
-    cur.close()
-    return row
-
-
-def create_ticket(discord_user, bot_msg_id,  status='open'):
+def create_ticket(discord_user, bot_msg_id=0,  status='open'):
     sql = f""" INSERT INTO tickets (discord_user, bot_msg_id, status) VALUES ({discord_user}, {bot_msg_id}, '{status}') """
-    print(sql)
-    # inserts = (discord_user, bot_msg_id, status)
-    # print(inserts)
-    # cur = get_cursor_with_connection()
-    # cur.execute(sql)
-    # row = cur.fetchone()
-    # cur.close()
     con = get_connection()
     cur = con.cursor()
     cur.execute(sql)
@@ -78,13 +68,56 @@ def create_ticket(discord_user, bot_msg_id,  status='open'):
     return row
 
 
-def create_ticket2(discord_user, bot_msg_id,  status='open'):  # not working because of row_factory = Row ?
-    sql = """ INSERT INTO tickets (discord_user, bot_msg_id, status) VALUES (?, ?, ?) """
-    inserts = (discord_user, bot_msg_id, status)
-    print(inserts)
+def select_msg_logs(search_col, search_val):
+    sql = f""" SELECT * FROM msg_logs WHERE {search_col} = {search_val} """
     cur = get_cursor_with_connection()
-    cur.execute(sql, inserts)
-    return cur.fetchone()
+    cur.execute(sql)
+    rows = cur.fetchall()
+    cur.close()
+    return rows
+
+
+def create_msg_log(ticket_id, sender,  msg_content):
+    sql = f""" INSERT INTO msg_logs (ticket_id, sender, msg_content) VALUES ({ticket_id}, '{sender}', '{msg_content}') """
+    con = get_connection()
+    cur = con.cursor()
+    cur.execute(sql)
+    row = cur.lastrowid
+    con.commit()
+    con.close()
+    return row
+
+
+def update_msg_log(update_col, search_col, search_val, new_val):
+    sql = f""" UPDATE msg_logs SET {update_col} = {new_val} WHERE {search_col} = {search_val} """
+    con = get_connection()
+    cur = con.cursor()
+    cur.execute(sql)
+    con.commit()
+    row = cur.lastrowid
+    con.close()
+    return row
+
+# def select_ticket2(search_col, search_val):  # not working because of row_factory = Row ?
+#     sql = f""" SELECT * FROM tickets WHERE ? = ? """
+#     vals = (search_col, search_val)
+#     cur = get_cursor_with_connection()
+#     cur.execute(sql, vals)
+#     row = cur.fetchone()
+#     cur.close()
+#     return row
+
+
+
+
+
+# def create_ticket2(discord_user, bot_msg_id,  status='open'):  # not working because of row_factory = Row ?
+#     sql = """ INSERT INTO tickets (discord_user, bot_msg_id, status) VALUES (?, ?, ?) """
+#     inserts = (discord_user, bot_msg_id, status)
+#     print(inserts)
+#     cur = get_cursor_with_connection()
+#     cur.execute(sql, inserts)
+#     return cur.fetchone()
 
 
 def create_table(conn, create_table_sql):
