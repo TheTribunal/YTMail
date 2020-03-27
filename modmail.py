@@ -1,6 +1,8 @@
 import discord
 from discord.ext import commands
 import logging
+import db_funcs as db
+
 
 logging.basicConfig(level=logging.INFO)
 
@@ -23,8 +25,16 @@ async def on_message(message):
     if message.author == bot.user:  # ignore messages from self
         return
     if isinstance(message.channel, discord.DMChannel):  # only listen to dm
+
         # TODO: check db for open ticket
+        ticket_id_request = (message.author.id, )
+        ticket_id = db.get_user_ticket_wrapper(ticket_id_request)
+
         # if not open ticket, make new ticket
+        if not ticket_id:
+            ticket_request = (message.author.id, 'open', 0)
+            ticket_id = db.new_ticket_wrapper(ticket_request, message.content)
+
         # log info to ticket in db
         await message.channel.send(f'ill send help! pls wait for a reply.')  # DM answer, only for testing
         channel_mod_mail = await bot.fetch_channel(channel_id_mod_mail)
@@ -32,7 +42,8 @@ async def on_message(message):
         # pass msg to modmail channel
         # TODO: format msg using discord package formatting
         mod_mail_msg = f"uid: {message.author.id} - author: {message.author}: \n{message.content}"
-        await channel_mod_mail.send(mod_mail_msg)
+        bot_msg = await channel_mod_mail.send(mod_mail_msg)
+        db.update_ticket_wrapper('bot_msg_id', ticket_id, bot_msg.id)
 
     await bot.process_commands(message)  # needed so the bot listens to commands
 
@@ -51,12 +62,22 @@ def is_mod_mail_channel():
 
 @bot.command()
 @is_mod_mail_channel()
-async def answer(ctx, ticket_id, *, arg):
+async def answer(ctx, ticket_id_input: int, *, arg):
     # TODO: lookup ticket id in db
+    ticket_id_request = (ticket_id_input,)
+    ticket_id = db.get_user_ticket_wrapper(ticket_id_request)
+    if not ticket_id:
+        error_msg = await ctx.send(f"Error: Ticket number {ticket_id_input} not found.")
+        error_msg.id.delete(delay=5)
+        return
+
+    ticket_request = ('user_id', 'id', ticket_id[0])
+    user_id = db.get_ticket_by(ticket_request)[2]
     # get user_id from ticket
     # log answer in db
+    print(f"{user_id}")
     # send answer to user DM
-    user = await bot.fetch_user(ticket_id)
+    user = await bot.fetch_user(user_id)
     user_dm_channel = user.dm_channel
     if not user_dm_channel:
         await user.create_dm()
