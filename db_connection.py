@@ -108,9 +108,6 @@ def update_msg_log(update_col, search_col, search_val, new_val):
 #     return row
 
 
-
-
-
 # def create_ticket2(discord_user, bot_msg_id,  status='open'):  # not working because of row_factory = Row ?
 #     sql = """ INSERT INTO tickets (discord_user, bot_msg_id, status) VALUES (?, ?, ?) """
 #     inserts = (discord_user, bot_msg_id, status)
