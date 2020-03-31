@@ -68,7 +68,7 @@ def create_ticket(discord_user, bot_msg_id=0,  status='open'):
     return row
 
 
-def select_msg_logs(search_col, search_val):
+def select_multiple_msg_logs(search_col, search_val):
     sql = f""" SELECT * FROM msg_logs WHERE {search_col} = {search_val} """
     cur = get_cursor_with_connection()
     cur.execute(sql)
@@ -97,6 +97,39 @@ def update_msg_log(update_col, search_col, search_val, new_val):
     row = cur.lastrowid
     con.close()
     return row
+
+
+def add_ignored_user(discord_user_id):
+    sql = f""" INSERT INTO ignored_users (discord_id) VALUES ({discord_user_id}) """
+    con = get_connection()
+    cur = con.cursor()
+    cur.execute(sql)
+    row = cur.lastrowid
+    con.commit()
+    con.close()
+    return row
+
+
+def get_ignored_users_list():
+    sql = f""" SELECT (discord_id) FROM ignored_users """
+    cur = get_cursor_with_connection()
+    cur.execute(sql)
+    rows = cur.fetchall()
+    cur.close()
+    users_list = [row['discord_id'] for row in rows]
+    return users_list
+
+
+def remove_ignored_user(discord_uid):
+    sql = f""" DELETE FROM ignored_users WHERE discord_id = ({discord_uid}) """
+    con = get_connection()
+    cur = con.cursor()
+    cur.execute(sql)
+    row = cur.lastrowid
+    con.commit()
+    con.close()
+    return row
+
 
 # def select_ticket2(search_col, search_val):  # not working because of row_factory = Row ?
 #     sql = f""" SELECT * FROM tickets WHERE ? = ? """
@@ -147,11 +180,18 @@ def create_tables(sqlite_file):
                                 'FOREIGN KEY (ticket_id) REFERENCES tickets (id)\n'
                                 ');\n')
 
+    sql_create_ignored_users = (' CREATE TABLE IF NOT EXISTS ignored_users (\n'
+                                'id integer PRIMARY KEY,\n'
+                                'discord_id integer NOT NULL \n'
+                                # ', discord_name text NOT NULL \n '
+                                ');\n')
+
     conn = create_connection(sqlite_file)
 
     if conn:
         create_table(conn, sql_create_tickets_table)
         create_table(conn, sql_create_msg_log_table)
+        create_table(conn, sql_create_ignored_users)
     else:
         print(f'ERROR: cannot create db connection')
 
